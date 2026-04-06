@@ -52,7 +52,7 @@ function StepSearch({onSelect}){
     if(query.trim().length<2){setResults([]);return;}
     const t=setTimeout(async()=>{
       setSearching(true);
-      try{const r=await fetch(`${API}/members?search=${encodeURIComponent(query)}`);setResults(await r.json());}
+      try{const r=await fetch(`${API}/members/public/search?search=${encodeURIComponent(query)}`);setResults(await r.json());}
       catch{}finally{setSearching(false);}
     },300);
     return()=>clearTimeout(t);
