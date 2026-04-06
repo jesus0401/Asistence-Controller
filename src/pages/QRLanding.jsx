@@ -230,26 +230,49 @@ export default function QRLanding() {
 
   const handleSelect = (u) => { setUser(u); setStep("email"); };
 
-  const handleSendCode = (em) => {
-    const c = generateCode();
-    setCode(c); setEmail(em); setStep("code");
-    console.log(`[SOLGYM QR] Código para ${user.name}: ${c}`);
-  };
+const handleSendCode = async (em) => {
+  try {
+    await fetch(`${API}/members/public/send-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId: user.id, email: em }),
+    });
+    setEmail(em);
+    setStep("code");
+  } catch (e) {
+    alert("Error al enviar código");
+  }
+};
 
-  const handleVerify = async () => {
-    // Register attendance
-    try { await fetch(`${API}/attendance`, { method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify({ memberId: user.id, verifiedBy: "qr" }) }); } catch {}
-    // Load routines and nutrition
-    try {
-      const [r, n] = await Promise.all([
-        fetch(`${API}/routines/public/${user.id}`).then(x => x.json()),
-        fetch(`${API}/nutrition/public/${user.id}`).then(x => x.json()),
-      ]);
-      setRoutines(r);
-      setNutrition(n);
-    } catch {}
+ const handleVerify = async (enteredCode) => {
+  try {
+    const r = await fetch(`${API}/members/public/verify-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId: user.id, code: enteredCode }),
+    });
+    const data = await r.json();
+    if (!data.verified) throw new Error("Código incorrecto");
+
+    // Registrar asistencia
+    await fetch(`${API}/attendance`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId: user.id, verifiedBy: "qr" }),
+    });
+
+    // Cargar rutina y nutrición
+    const [ro, nu] = await Promise.all([
+      fetch(`${API}/routines/public/${user.id}`).then(x => x.json()),
+      fetch(`${API}/nutrition/public/${user.id}`).then(x => x.json()),
+    ]);
+    setRoutines(ro);
+    setNutrition(nu);
     setStep("success");
-  };
+  } catch (e) {
+    alert(e.message);
+  }
+};
 
   const handleLogout = () => { setStep("search"); setUser(null); setEmail(""); setCode(""); setRoutines({}); setNutrition({}); };
 
