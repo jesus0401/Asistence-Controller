@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
+const API = import.meta.env.VITE_API_URL || "https://asistence-controller-backend.onrender.com/api";
+
 /* ─── Design tokens (standalone, no imports needed) ─── */
 const T = {
   yellow:     "#F5B800",
@@ -79,12 +81,23 @@ function PBtn({ children, onClick, variant = "primary", disabled, full, style: e
 /* ══════════════════════════════════════════════
    STEP 1 — SEARCH & SELECT NAME
 ══════════════════════════════════════════════ */
-function StepSearch({ users, onSelect }) {
-  const [query, setQuery]   = useState("");
-  const [focused, setFocused] = useState(false);
-  const results = query.trim().length >= 2
-    ? users.filter(u => u.name.toLowerCase().includes(query.toLowerCase()))
-    : [];
+ function StepSearch({ onSelect }) {
+  const [query,     setQuery]     = useState("");
+  const [focused,   setFocused]   = useState(false);
+  const [results,   setResults]   = useState([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const r = await fetch(`${API}/members/public/search?search=${encodeURIComponent(query)}`);
+        setResults(await r.json());
+      } catch {} finally { setSearching(false); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -117,8 +130,15 @@ function StepSearch({ users, onSelect }) {
         />
       </div>
 
+      {/* Buscando... */}
+      {searching && (
+        <p style={{ color: T.textMute, fontSize: "12px", textAlign: "center", margin: 0 }}>
+          Buscando...
+        </p>
+      )}
+
       {/* Results */}
-      {query.trim().length >= 2 && (
+      {query.trim().length >= 2 && !searching && (
         <div style={{ background: T.dark2, borderRadius: "12px", border: `1px solid ${T.border}`, overflow: "hidden" }}>
           {results.length === 0 ? (
             <div style={{ padding: "24px", textAlign: "center", color: T.textMute, fontSize: "13px" }}>
@@ -141,8 +161,10 @@ function StepSearch({ users, onSelect }) {
                 <div style={{ flex: 1 }}>
                   <p style={{ color: T.text, margin: 0, fontWeight: "700", fontSize: "15px" }}>{u.name}</p>
                   <p style={{ color: T.textMute, margin: "2px 0 0", fontSize: "12px" }}>
-                    Plan {u.plan} · Vence: {u.end}
-                    {u.daysLeft <= 7 && <span style={{ color: T.warning, marginLeft: "8px" }}>⚠️ {u.daysLeft}d</span>}
+                    Plan {u.plan ?? "-"} 
+                    {u.daysLeft !== null && u.daysLeft <= 7 && (
+                      <span style={{ color: T.warning, marginLeft: "8px" }}>⚠️ {u.daysLeft}d</span>
+                    )}
                   </p>
                 </div>
                 <span style={{ color: T.yellow, fontSize: "20px" }}>→</span>
@@ -620,18 +642,47 @@ export default function QRLanding({ users = [], routines = {}, nutrition = {} })
     setStep("email");
   };
 
-  const handleSendCode = (email) => {
-    const code = generateCode();
-    setGeneratedCode(code);
+const handleSendCode = async (email) => {
+  try {
+    await fetch(`${API}/members/public/send-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId: selectedUser.id, email }),
+    });
     setVerifiedEmail(email);
-    console.log(`[SOLGYM] Código para ${selectedUser.name}: ${code}`); // En producción → enviar por email
     setStep("code");
-  };
+  } catch (e) {
+    alert("Error al enviar código");
+  }
+};
 
-  const handleVerify = () => {
+const handleVerify = async (enteredCode) => {
+  try {
+    const r = await fetch(`${API}/members/public/verify-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId: selectedUser.id, code: enteredCode }),
+    });
+    const data = await r.json();
+    if (!data.verified) throw new Error("Código incorrecto");
+
+    await fetch(`${API}/attendance`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId: selectedUser.id, verifiedBy: "qr" }),
+    });
+
+    const [ro, nu] = await Promise.all([
+      fetch(`${API}/routines/public/${selectedUser.id}`).then(x => x.json()),
+      fetch(`${API}/nutrition/public/${selectedUser.id}`).then(x => x.json()),
+    ]);
+    setRoutines(ro);
+    setNutrition(nu);
     setStep("success");
-    // Aquí registrar asistencia en la BD
-  };
+  } catch (e) {
+    alert(e.message);
+  }
+};  
 
   const handleViewProfile = () => setStep("profile");
   const handleLogout = () => {
