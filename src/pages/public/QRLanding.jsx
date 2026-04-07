@@ -265,7 +265,7 @@ function StepEmail({ user, onSendCode, onBack }) {
 /* ══════════════════════════════════════════════
    STEP 3 — ENTER VERIFICATION CODE
 ══════════════════════════════════════════════ */
-function StepCode({ user, email, onVerify, onResend, onBack }) {
+function StepCode({ user, email, screenCode, onVerify, onResend, onBack }) {
   const [code, setCode]     = useState(["", "", "", "", "", ""]);
   const [error, setError]   = useState("");
   const [loading, setLoading] = useState(false);
@@ -341,11 +341,19 @@ function StepCode({ user, email, onVerify, onResend, onBack }) {
         </p>
       </div>
 
-      {/* Demo hint
-      <div style={{ background: T.dark3, borderRadius: "10px", padding: "10px 14px", border: `1px solid ${T.border}`, textAlign: "center" }}>
-        <p style={{ color: T.textMute, fontSize: "10px", margin: "0 0 2px", letterSpacing: "1px" }}>MODO DEMO — código de prueba</p>
-        <p style={{ color: T.yellow, fontSize: "20px", fontWeight: "800", fontFamily: "Bebas Neue, sans-serif", letterSpacing: "4px", margin: 0 }}>{generatedCode}</p>
-      </div> */}
+      {screenCode && (
+  <div style={{ background: T.dark3, borderRadius: "10px", padding: "14px", border: `1px solid ${T.yellow}44`, textAlign: "center" }}>
+    <p style={{ color: T.textMute, fontSize: "10px", margin: "0 0 4px", letterSpacing: "1px" }}>
+      TU CÓDIGO DE VERIFICACIÓN
+    </p>
+    <p style={{ color: T.yellow, fontSize: "36px", fontWeight: "800", fontFamily: "Bebas Neue, sans-serif", letterSpacing: "8px", margin: 0 }}>
+      {screenCode}
+    </p>
+    <p style={{ color: T.textMute, fontSize: "10px", margin: "6px 0 0" }}>
+      Ingresa este código abajo para confirmar tu asistencia
+    </p>
+  </div>
+)}
 
       {/* 6-digit input */}
       <div style={{ display: "flex", gap: "8px", justifyContent: "center" }} onPaste={handlePaste}>
@@ -642,6 +650,7 @@ export default function QRLanding() {
   const [verifiedEmail, setVerifiedEmail] = useState("");
   const [routines, setRoutines] = useState({});
   const [nutrition, setNutrition] = useState({});
+  const [screenCode, setScreenCode] = useState(null); // ← nuevo estado para el código en pantalla
 
   useEffect(() => { injectFont(); }, []);
 
@@ -654,12 +663,14 @@ export default function QRLanding() {
 
 const handleSendCode = async (email) => {
   try {
-    await fetch(`${API}/members/public/send-code`, {
+    const r = await fetch(`${API}/members/public/send-code`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ memberId: selectedUser.id, email }),
     });
+    const data = await r.json();
     setVerifiedEmail(email);
+    setScreenCode(data.code ?? null); // ← guardar código
     setStep("code");
   } catch (e) {
     alert("Error al enviar código");
@@ -689,13 +700,14 @@ const handleVerify = async () => {
 };
 
   const handleViewProfile = () => setStep("profile");
-  const handleLogout = () => {
-    setStep("search");
-    setSelectedUser(null);
-    setVerifiedEmail("");
-    setGeneratedCode("");
-  };
-
+const handleLogout = () => {
+  setStep("search");
+  setSelectedUser(null);
+  setVerifiedEmail("");
+  setScreenCode(null); // ← agregar
+  setRoutines({});
+  setNutrition({});
+};
   // User-specific routines and nutrition data
   const userRoutines  = selectedUser ? (routines[selectedUser.id]  ?? {}) : {};
   const userNutrition = selectedUser ? (nutrition[selectedUser.id] ?? {}) : {};
@@ -715,7 +727,7 @@ const handleVerify = async () => {
       <div style={{ width: "100%", maxWidth: "480px", background: T.dark1, borderRadius: "20px", border: `1px solid ${T.border}`, padding: "28px 24px", boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}>
         {step === "search"  && <StepSearch  onSelect={handleSelect} />}
         {step === "email"   && <StepEmail    user={selectedUser} onSendCode={handleSendCode} onBack={() => setStep("search")} />}
-        {step === "code" && <StepCode user={selectedUser} email={verifiedEmail} onVerify={handleVerify} onResend={() => handleSendCode(verifiedEmail)} onBack={() => setStep("email")} />}
+        {step === "code" &&  ( <StepCode    user={selectedUser}    email={verifiedEmail}    screenCode={screenCode}     onVerify={handleVerify}    onResend={() => handleSendCode(verifiedEmail)} onBack={() => setStep("email")} />)}
         {step === "success" && <StepSuccess  user={selectedUser} onViewProfile={handleViewProfile} />}
         {step === "profile" && <MemberProfile user={selectedUser} userRoutines={userRoutines} userNutrition={userNutrition} onLogout={handleLogout} />}
       </div>
