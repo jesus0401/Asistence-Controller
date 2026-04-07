@@ -7,7 +7,19 @@ import Badge     from "../components/ui/Badge";
 import Btn       from "../components/ui/Btn";
 import UserModal from "../modals/UserModal";
 
+const API = import.meta.env.VITE_API_URL || "https://asistence-controller-backend.onrender.com/api";
 const planColor = p => ({ Mensual: T.yellow, Trimestral: T.info, Semestral: "#A78BFA", Anual: T.success }[p] || T.textSub);
+
+const getMembershipStatus = (u) => {
+  if (!u.endDate) return { text: u.status === "ACTIVO" ? "Activo" : "Inactivo", color: u.status === "ACTIVO" ? T.success : T.danger };
+  const days = u.daysLeft;
+  if (u.status === "INACTIVO") return { text: "Inactivo", color: T.danger };
+  if (days === null) return { text: "Sin plan", color: T.textMute };
+  if (days < 0)  return { text: "Vencida", color: T.danger };
+  if (days === 0) return { text: "Vence hoy", color: T.warning };
+  if (days <= 7) return { text: `${days}d`, color: T.warning };
+  return { text: "Activo", color: T.success };
+};
 
 export default function Users() {
   const [members,    setMembers]    = useState([]);
@@ -23,13 +35,9 @@ export default function Users() {
     setLoading(true);
     try {
       const [m, p] = await Promise.all([membersService.getAll(), plansService.getAll()]);
-      setMembers(m);
-      setPlans(p);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+      setMembers(m); setPlans(p);
+    } catch (e) { setError(e.message); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -43,40 +51,41 @@ export default function Users() {
   const saveUser = async (form) => {
     try {
       if (form.id) {
-        // Editar — solo datos personales
         await membersService.update(form.id, {
           name:      form.name,
           email:     form.email,
-          phone:     form.phone      || null,
-          birthDate: form.birthDate  || null,
+          phone:     form.phone     || null,
+          birthDate: form.birthDate || null,
         });
-        // Si hay plan y fechas, crear/actualizar membresía
+        // Actualizar membresía si hay plan y fechas (aunque sean pasadas)
         if (form.planId && form.startDate && form.endDate) {
-          await fetch(
-            `${import.meta.env.VITE_API_URL || "https://asistence-controller-backend.onrender.com/api"}/members/${form.id}/membership`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("solgym_token")}` },
-              body: JSON.stringify({ planId: form.planId, startDate: form.startDate, endDate: form.endDate }),
-            }
-          );
+          await fetch(`${API}/members/${form.id}/membership`, {
+            method:  "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("solgym_token")}` },
+            body: JSON.stringify({ planId: form.planId, startDate: form.startDate, endDate: form.endDate }),
+          });
         }
       } else {
-        // Crear nuevo miembro
         await membersService.create({
           name:      form.name,
           email:     form.email,
-          phone:     form.phone      || null,
-          birthDate: form.birthDate  || null,
-          planId:    form.planId     || null,
-          startDate: form.startDate  || null,
-          endDate:   form.endDate    || null,
+          phone:     form.phone     || null,
+          birthDate: form.birthDate || null,
+          planId:    form.planId    || null,
+          startDate: form.startDate || null,
+          endDate:   form.endDate   || null,
         });
       }
       await load();
-    } catch (e) {
-      alert("Error: " + e.message);
-    }
+    } catch (e) { alert("Error: " + e.message); }
+  };
+
+  // Toggle activo/inactivo
+  const toggleStatus = async (u) => {
+    try {
+      await membersService.update(u.id, { ...u, status: u.status === "ACTIVO" ? "INACTIVO" : "ACTIVO" });
+      await load();
+    } catch (e) { alert("Error: " + e.message); }
   };
 
   const deleteUser = async (id) => {
@@ -84,9 +93,7 @@ export default function Users() {
       await membersService.remove(id);
       setDelConfirm(null);
       await load();
-    } catch (e) {
-      alert("Error: " + e.message);
-    }
+    } catch (e) { alert("Error: " + e.message); }
   };
 
   return (
@@ -109,19 +116,16 @@ export default function Users() {
           />
         </div>
         <select value={planF} onChange={e => setPlanF(e.target.value)}
-          style={{ background: T.dark3, border: `1px solid ${T.border}`, borderRadius: "8px", padding: "9px 14px", color: T.text, fontSize: "12px", outline: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif" }}
-        >
-          <option value="Todos">Todos</option>
+          style={{ background: T.dark3, border: `1px solid ${T.border}`, borderRadius: "8px", padding: "9px 14px", color: T.text, fontSize: "12px", outline: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif" }}>
+          <option value="Todos">Todos los planes</option>
           {plans.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
         </select>
         <span style={{ color: T.textSub, fontSize: "12px" }}>{filtered.length} resultados</span>
       </div>
 
-      {/* Loading / Error */}
       {loading && <div style={{ ...card, textAlign: "center", color: T.textMute, padding: "40px" }}>Cargando miembros...</div>}
       {error   && <div style={{ ...card, textAlign: "center", color: T.danger,   padding: "20px" }}>{error}</div>}
 
-      {/* Table */}
       {!loading && (
         <div style={{ ...card, overflowX: "auto", padding: "0" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "600px" }}>
@@ -133,38 +137,52 @@ export default function Users() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(u => (
-                <tr key={u.id}
-                  style={{ borderBottom: `1px solid ${T.border}`, transition: "background 0.12s" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                >
-                  <td style={{ padding: "13px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <Avatar name={u.name} size={32} />
-                      <div>
-                        <p style={{ color: T.text, margin: 0, fontSize: "13px", fontWeight: "600" }}>{u.name}</p>
-                        <p style={{ color: T.textMute, margin: "1px 0 0", fontSize: "11px" }}>{u.email}</p>
+              {filtered.map(u => {
+                const memStatus = getMembershipStatus(u);
+                return (
+                  <tr key={u.id}
+                    style={{ borderBottom: `1px solid ${T.border}`, transition: "background 0.12s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                  >
+                    <td style={{ padding: "13px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <Avatar name={u.name} size={32} />
+                        <div>
+                          <p style={{ color: T.text, margin: 0, fontSize: "13px", fontWeight: "600" }}>{u.name}</p>
+                          <p style={{ color: T.textMute, margin: "1px 0 0", fontSize: "11px" }}>{u.email}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: "13px 16px", color: T.textSub, fontSize: "12px" }}>{u.phone}</td>
-                  <td style={{ padding: "13px 16px" }}>
-                    {u.plan ? <Badge text={u.plan} color={planColor(u.plan)} /> : <span style={{ color: T.textMute, fontSize: "12px" }}>Sin plan</span>}
-                  </td>
-                  <td style={{ padding: "13px 16px", color: u.daysLeft <= 7 ? T.warning : T.textSub, fontSize: "12px", fontWeight: u.daysLeft <= 7 ? "700" : "400" }}>
-                    {u.endDate ? new Date(u.endDate).toLocaleDateString("es-PE") : "—"}
-                    {u.daysLeft <= 7 && u.daysLeft !== null && ` (${u.daysLeft}d)`}
-                  </td>
-                  <td style={{ padding: "13px 16px" }}><Badge text={u.status} color={T.success} /></td>
-                  <td style={{ padding: "13px 16px" }}>
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <Btn size="sm" variant="ghost"  onClick={() => setModal(u)}>Editar</Btn>
-                      <Btn size="sm" variant="danger" onClick={() => setDelConfirm(u.id)}>🗑</Btn>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td style={{ padding: "13px 16px", color: T.textSub, fontSize: "12px" }}>{u.phone ?? "—"}</td>
+                    <td style={{ padding: "13px 16px" }}>
+                      {u.plan
+                        ? <Badge text={u.plan} color={planColor(u.plan)} />
+                        : <span style={{ color: T.textMute, fontSize: "12px" }}>Sin plan</span>}
+                    </td>
+                    <td style={{ padding: "13px 16px", color: u.daysLeft !== null && u.daysLeft <= 7 ? T.warning : T.textSub, fontSize: "12px", fontWeight: u.daysLeft !== null && u.daysLeft <= 7 ? "700" : "400" }}>
+                      {u.endDate ? new Date(u.endDate).toLocaleDateString("es-PE", { timeZone: "UTC" }) : "—"}
+                      {u.daysLeft !== null && u.daysLeft <= 7 && u.daysLeft >= 0 && ` (${u.daysLeft}d)`}
+                    </td>
+                    <td style={{ padding: "13px 16px" }}>
+                      {/* Badge clickeable para cambiar estado */}
+                      <div
+                        onClick={() => toggleStatus(u)}
+                        title="Clic para cambiar estado"
+                        style={{ cursor: "pointer", display: "inline-block" }}
+                      >
+                        <Badge text={memStatus.text} color={memStatus.color} />
+                      </div>
+                    </td>
+                    <td style={{ padding: "13px 16px" }}>
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        <Btn size="sm" variant="ghost"  onClick={() => setModal(u)}>Editar</Btn>
+                        <Btn size="sm" variant="danger" onClick={() => setDelConfirm(u.id)}>🗑</Btn>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {filtered.length === 0 && !loading && (
@@ -189,7 +207,7 @@ export default function Users() {
             <p style={{ color: T.textSub, fontSize: "13px", margin: "0 0 24px" }}>Esta acción desactivará al miembro.</p>
             <div style={{ display: "flex", gap: "10px" }}>
               <Btn variant="outline" onClick={() => setDelConfirm(null)} full>Cancelar</Btn>
-              <Btn variant="danger" onClick={() => deleteUser(delConfirm)} full>Eliminar</Btn>
+              <Btn variant="danger"  onClick={() => deleteUser(delConfirm)} full>Eliminar</Btn>
             </div>
           </div>
         </div>
