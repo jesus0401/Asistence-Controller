@@ -293,21 +293,30 @@ function StepCode({ user, email, generatedCode, onVerify, onResend, onBack }) {
     }
   };
 
-  const verify = () => {
-    const entered = code.join("");
-    if (entered.length < 6) { setError("Ingresa el código completo"); return; }
-    setLoading(true); setError("");
-    setTimeout(() => {
-      if (entered === generatedCode) {
-        onVerify();
-      } else {
-        setError("Código incorrecto. Inténtalo de nuevo.");
-        setCode(["", "", "", "", "", ""]);
-        refs.current[0]?.focus();
-      }
-      setLoading(false);
-    }, 600);
-  };
+  const verify = async () => {
+  const entered = code.join("");
+  if (entered.length < 6) { setError("Ingresa el código completo"); return; }
+  setLoading(true); setError("");
+  try {
+    const r = await fetch(`${API}/members/public/verify-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId: user.id, code: entered }),
+    });
+    const data = await r.json();
+    if (data.verified) {
+      onVerify();
+    } else {
+      setError(data.error || "Código incorrecto");
+      setCode(["", "", "", "", "", ""]);
+      refs.current[0]?.focus();
+    }
+  } catch {
+    setError("Error al verificar el código");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const resend = () => {
     onResend();
