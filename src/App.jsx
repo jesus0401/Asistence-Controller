@@ -34,7 +34,6 @@ export default function App() {
 
   const isQRRoute = window.location.search.includes("qr=1");
 
-  // Responsive sidebar
   useEffect(() => {
     const check = () => {
       const mob = window.innerWidth < 768;
@@ -46,7 +45,6 @@ export default function App() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Verificar que el token sigue siendo válido al montar
   useEffect(() => {
     if (!user || isQRRoute) return;
     authService.me().catch(() => handleLogout());
@@ -65,7 +63,6 @@ export default function App() {
     setUser(null);
   };
 
-  // PUBLIC — Página QR para miembros
   if (isQRRoute) return (
     <>
       <FontInjector />
@@ -73,7 +70,6 @@ export default function App() {
     </>
   );
 
-  // LOGIN
   if (!user) return (
     <>
       <FontInjector />
@@ -81,7 +77,6 @@ export default function App() {
     </>
   );
 
-  // DASHBOARD
   return (
     <>
       <FontInjector />
@@ -99,6 +94,7 @@ export default function App() {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
           <Navbar
             onMenu={() => setSideOpen(s => !s)}
+            onNavigate={setPage}
             user={user}
           />
           <main style={{ flex: 1, overflowY: "auto", padding: isMob ? "14px" : "24px" }}>
