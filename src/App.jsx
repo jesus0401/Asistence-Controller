@@ -105,9 +105,9 @@ export default function App() {
             {page === "dashboard"  && <Dashboard  />}
             {page === "usuarios"   && <Users      />}
             {page === "asistencia" && <Attendance />}
-            {page === "fitness"    && <Fitness    users={[]} />}
-            {page === "nutricion"  && <Nutrition  users={[]} />}
-            {page === "planes"     && <Plans      users={[]} />}
+            {page === "fitness"    && <Fitness    />}
+            {page === "nutricion"  && <Nutrition  />}
+            {page === "planes"     && <Plans      />}
             {page === "boletas"    && <Billing    />}
             {page === "perfiles"   && <Profiles   />}
             {page === "admin"      && <Admin      />}
