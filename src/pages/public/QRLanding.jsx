@@ -305,7 +305,7 @@ function StepCode({ user, email, onVerify, onResend, onBack }) {
     });
     const data = await r.json();
     if (data.verified) {
-      onVerify();
+      onVerify(entered);
     } else {
       setError(data.error || "Código incorrecto");
       setCode(["", "", "", "", "", ""]);
@@ -341,11 +341,11 @@ function StepCode({ user, email, onVerify, onResend, onBack }) {
         </p>
       </div>
 
-      {/* Demo hint */}
+      {/* Demo hint
       <div style={{ background: T.dark3, borderRadius: "10px", padding: "10px 14px", border: `1px solid ${T.border}`, textAlign: "center" }}>
         <p style={{ color: T.textMute, fontSize: "10px", margin: "0 0 2px", letterSpacing: "1px" }}>MODO DEMO — código de prueba</p>
         <p style={{ color: T.yellow, fontSize: "20px", fontWeight: "800", fontFamily: "Bebas Neue, sans-serif", letterSpacing: "4px", margin: 0 }}>{generatedCode}</p>
-      </div>
+      </div> */}
 
       {/* 6-digit input */}
       <div style={{ display: "flex", gap: "8px", justifyContent: "center" }} onPaste={handlePaste}>
@@ -636,11 +636,12 @@ function MemberProfile({ user, userRoutines, userNutrition, onLogout }) {
 /* ══════════════════════════════════════════════
    ROOT — QR LANDING PAGE
 ══════════════════════════════════════════════ */
-export default function QRLanding({ users = [], routines = {}, nutrition = {} }) {
-  const [step,          setStep]          = useState("search");   // search | email | code | success | profile
-  const [selectedUser,  setSelectedUser]  = useState(null);
+export default function QRLanding() {
+  const [step, setStep] = useState("search");
+  const [selectedUser, setSelectedUser] = useState(null);
   const [verifiedEmail, setVerifiedEmail] = useState("");
-  const [generatedCode, setGeneratedCode] = useState("");
+  const [routines, setRoutines] = useState({});
+  const [nutrition, setNutrition] = useState({});
 
   useEffect(() => { injectFont(); }, []);
 
@@ -718,7 +719,7 @@ const handleVerify = async (enteredCode) => {
 
       {/* Card */}
       <div style={{ width: "100%", maxWidth: "480px", background: T.dark1, borderRadius: "20px", border: `1px solid ${T.border}`, padding: "28px 24px", boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}>
-        {step === "search"  && <StepSearch   users={users}    onSelect={handleSelect} />}
+        {step === "search"  && <StepSearch  onSelect={handleSelect} />}
         {step === "email"   && <StepEmail    user={selectedUser} onSendCode={handleSendCode} onBack={() => setStep("search")} />}
         {step === "code" && <StepCode user={selectedUser} email={verifiedEmail} onVerify={handleVerify} onResend={() => handleSendCode(verifiedEmail)} onBack={() => setStep("email")} />}
         {step === "success" && <StepSuccess  user={selectedUser} onViewProfile={handleViewProfile} />}
