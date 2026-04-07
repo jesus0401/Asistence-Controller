@@ -305,7 +305,7 @@ function StepCode({ user, email, onVerify, onResend, onBack }) {
     });
     const data = await r.json();
     if (data.verified) {
-      onVerify(entered);
+      onVerify();
     } else {
       setError(data.error || "Código incorrecto");
       setCode(["", "", "", "", "", ""]);
