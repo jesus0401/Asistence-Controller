@@ -43,10 +43,35 @@ export default function Users() {
   const saveUser = async (form) => {
     try {
       if (form.id) {
-        await membersService.update(form.id, form);
+        // Editar — solo datos personales
+        await membersService.update(form.id, {
+          name:      form.name,
+          email:     form.email,
+          phone:     form.phone      || null,
+          birthDate: form.birthDate  || null,
+        });
+        // Si hay plan y fechas, crear/actualizar membresía
+        if (form.planId && form.startDate && form.endDate) {
+          await fetch(
+            `${import.meta.env.VITE_API_URL || "https://asistence-controller-backend.onrender.com/api"}/members/${form.id}/membership`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("solgym_token")}` },
+              body: JSON.stringify({ planId: form.planId, startDate: form.startDate, endDate: form.endDate }),
+            }
+          );
+        }
       } else {
-        const planObj = plans.find(p => p.name === form.plan);
-        await membersService.create({ ...form, planId: planObj?.id });
+        // Crear nuevo miembro
+        await membersService.create({
+          name:      form.name,
+          email:     form.email,
+          phone:     form.phone      || null,
+          birthDate: form.birthDate  || null,
+          planId:    form.planId     || null,
+          startDate: form.startDate  || null,
+          endDate:   form.endDate    || null,
+        });
       }
       await load();
     } catch (e) {
