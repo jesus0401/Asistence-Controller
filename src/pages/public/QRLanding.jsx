@@ -265,7 +265,7 @@ function StepEmail({ user, onSendCode, onBack }) {
 /* ══════════════════════════════════════════════
    STEP 3 — ENTER VERIFICATION CODE
 ══════════════════════════════════════════════ */
-function StepCode({ user, email, generatedCode, onVerify, onResend, onBack }) {
+function StepCode({ user, email, onVerify, onResend, onBack }) {
   const [code, setCode]     = useState(["", "", "", "", "", ""]);
   const [error, setError]   = useState("");
   const [loading, setLoading] = useState(false);
@@ -720,7 +720,7 @@ const handleVerify = async (enteredCode) => {
       <div style={{ width: "100%", maxWidth: "480px", background: T.dark1, borderRadius: "20px", border: `1px solid ${T.border}`, padding: "28px 24px", boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}>
         {step === "search"  && <StepSearch   users={users}    onSelect={handleSelect} />}
         {step === "email"   && <StepEmail    user={selectedUser} onSendCode={handleSendCode} onBack={() => setStep("search")} />}
-        {step === "code"    && <StepCode     user={selectedUser} email={verifiedEmail} generatedCode={generatedCode} onVerify={handleVerify} onResend={() => handleSendCode(verifiedEmail)} onBack={() => setStep("email")} />}
+        {step === "code" && <StepCode user={selectedUser} email={verifiedEmail} onVerify={handleVerify} onResend={() => handleSendCode(verifiedEmail)} onBack={() => setStep("email")} />}
         {step === "success" && <StepSuccess  user={selectedUser} onViewProfile={handleViewProfile} />}
         {step === "profile" && <MemberProfile user={selectedUser} userRoutines={userRoutines} userNutrition={userNutrition} onLogout={handleLogout} />}
       </div>
