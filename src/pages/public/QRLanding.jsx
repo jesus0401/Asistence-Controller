@@ -666,22 +666,16 @@ const handleSendCode = async (email) => {
   }
 };
 
-const handleVerify = async (enteredCode) => {
+const handleVerify = async () => {
   try {
-    const r = await fetch(`${API}/members/public/verify-code`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memberId: selectedUser.id, code: enteredCode }),
-    });
-    const data = await r.json();
-    if (!data.verified) throw new Error("Código incorrecto");
-
+    // Registrar asistencia
     await fetch(`${API}/attendance`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ memberId: selectedUser.id, verifiedBy: "qr" }),
     });
 
+    // Cargar rutina y nutrición
     const [ro, nu] = await Promise.all([
       fetch(`${API}/routines/public/${selectedUser.id}`).then(x => x.json()),
       fetch(`${API}/nutrition/public/${selectedUser.id}`).then(x => x.json()),
@@ -692,7 +686,7 @@ const handleVerify = async (enteredCode) => {
   } catch (e) {
     alert(e.message);
   }
-};  
+};
 
   const handleViewProfile = () => setStep("profile");
   const handleLogout = () => {
