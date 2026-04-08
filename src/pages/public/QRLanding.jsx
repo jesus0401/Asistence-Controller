@@ -711,8 +711,8 @@ const handleLogout = () => {
   setNutrition({});
 };
   // User-specific routines and nutrition data
-  const userRoutines  = selectedUser ? (routines[selectedUser.id]  ?? {}) : {};
-  const userNutrition = selectedUser ? (nutrition[selectedUser.id] ?? {}) : {};
+  const userRoutines  = routines;
+  const userNutrition = nutrition;
 
   return (
     <div style={{ minHeight: "100vh", background: T.black, fontFamily: "Nunito, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "24px 16px 48px" }}>
