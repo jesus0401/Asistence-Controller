@@ -444,8 +444,9 @@ function StepSuccess({ user, onViewProfile }) {
    MEMBER PROFILE — ROUTINES (read-only)
 ══════════════════════════════════════════════ */
 function RoutineViewer({ routines }) {
-  const [activeDay, setActiveDay] = useState("Lunes");
-  const dayExercises = routines?.[activeDay] ?? [];
+  const DAY_MAP = { "Lunes": "LUNES", "Martes": "MARTES", "Miércoles": "MIERCOLES", "Jueves": "JUEVES", "Viernes": "VIERNES", "Sábado": "SABADO" };
+const [activeDay, setActiveDay] = useState("Lunes");
+const dayExercises = routines?.[DAY_MAP[activeDay]] ?? [];
 
   const muscleInfo = id => MUSCLE_GROUPS.find(m => m.id === id) ?? { label: id, color: T.textMute, icon: "💪" };
 
@@ -454,7 +455,7 @@ function RoutineViewer({ routines }) {
       {/* Day tabs */}
       <div style={{ display: "flex", gap: "4px", overflowX: "auto", paddingBottom: "4px" }}>
         {DAYS.map(day => {
-          const count = (routines?.[day] ?? []).length;
+          const count = (routines?.[DAY_MAP[day]] ?? []).length;
           return (
             <button key={day} onClick={() => setActiveDay(day)}
               style={{
@@ -522,15 +523,16 @@ function RoutineViewer({ routines }) {
    MEMBER PROFILE — NUTRITION (read-only)
 ══════════════════════════════════════════════ */
 function NutritionViewer({ nutrition }) {
-  const [activeDay, setActiveDay] = useState("Lunes");
-  const dayPlan = nutrition?.[activeDay] ?? {};
+  const DAY_MAP = { "Lunes": "LUNES", "Martes": "MARTES", "Miércoles": "MIERCOLES", "Jueves": "JUEVES", "Viernes": "VIERNES", "Sábado": "SABADO" };
+const [activeDay, setActiveDay] = useState("Lunes");
+const dayPlan = nutrition?.[DAY_MAP[activeDay]] ?? {};
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
       {/* Day tabs */}
       <div style={{ display: "flex", gap: "4px", overflowX: "auto", paddingBottom: "4px" }}>
         {DAYS.map(day => {
-          const filled = Object.values(nutrition?.[day] ?? {}).filter(m => m?.food?.trim()).length;
+          const filled = Object.values(nutrition?.[DAY_MAP[day]] ?? {}).filter(m => m?.food?.trim()).length;
           return (
             <button key={day} onClick={() => setActiveDay(day)}
               style={{
