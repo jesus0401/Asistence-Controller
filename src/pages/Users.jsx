@@ -7,17 +7,17 @@ import Badge     from "../components/ui/Badge";
 import Btn       from "../components/ui/Btn";
 import UserModal from "../modals/UserModal";
 
-const API       = import.meta.env.VITE_API_URL || "https://asistence-controller-backend.onrender.com/api";
 const PAGE_SIZE = 15;
+const API = import.meta.env.VITE_API_URL || "https://asistence-controller-backend.onrender.com/api";
 const planColor = p => ({ Mensual: T.yellow, Trimestral: T.info, Semestral: "#A78BFA", Anual: T.success }[p] || T.textSub);
 
 const getMembershipStatus = (u) => {
   if (u.status === "INACTIVO") return { text: "Inactivo", color: T.danger };
   if (!u.endDate)              return { text: "Sin plan",  color: T.textMute };
   const days = u.daysLeft;
-  if (days < 0)   return { text: "Vencida",    color: T.danger  };
-  if (days === 0) return { text: "Vence hoy",  color: T.warning };
-  if (days <= 7)  return { text: `${days}d`,   color: T.warning };
+  if (days < 0)   return { text: "Vencida",   color: T.danger  };
+  if (days === 0) return { text: "Vence hoy", color: T.warning };
+  if (days <= 7)  return { text: `${days}d`,  color: T.warning };
   return { text: "Activo", color: T.success };
 };
 
@@ -32,6 +32,7 @@ export default function Users() {
   const [page,          setPage]          = useState(1);
   const [modal,         setModal]         = useState(null);
   const [confirmToggle, setConfirmToggle] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -82,6 +83,14 @@ export default function Users() {
     } catch (e) { alert("Error: " + e.message); }
   };
 
+  const deleteUser = async (u) => {
+    try {
+      await membersService.remove(u.id);
+      setConfirmDelete(null);
+      await load();
+    } catch (e) { alert("Error: " + e.message); }
+  };
+
   const activos   = members.filter(m => m.status === "ACTIVO").length;
   const inactivos = members.filter(m => m.status === "INACTIVO").length;
 
@@ -104,7 +113,6 @@ export default function Users() {
             onFocus={e => e.target.style.borderColor = T.yellow} onBlur={e => e.target.style.borderColor = T.border} />
         </div>
 
-        {/* Filtro estado */}
         <div style={{ display: "flex", background: T.dark3, borderRadius: "8px", border: `1px solid ${T.border}`, overflow: "hidden" }}>
           {[
             { val: "ACTIVO",   label: `Activos (${activos})`     },
@@ -118,7 +126,6 @@ export default function Users() {
           ))}
         </div>
 
-        {/* Filtro plan */}
         <select value={planF} onChange={e => { setPlanF(e.target.value); resetPage(); }}
           style={{ background: T.dark3, border: `1px solid ${T.border}`, borderRadius: "8px", padding: "9px 14px", color: T.text, fontSize: "12px", outline: "none", cursor: "pointer", fontFamily: "Nunito, sans-serif" }}>
           <option value="Todos">Todos los planes</option>
@@ -137,7 +144,7 @@ export default function Users() {
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "600px" }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                  {["USUARIO", "TELÉFONO", "PLAN", "VENCE", "ESTADO", ""].map(h => (
+                  {["USUARIO", "TELÉFONO", "PLAN", "VENCE", "ESTADO", "ACCIONES"].map(h => (
                     <th key={h} style={{ color: T.textMute, fontSize: "10px", textAlign: "left", padding: "14px 16px", fontWeight: "700", letterSpacing: "0.8px" }}>{h}</th>
                   ))}
                 </tr>
@@ -175,7 +182,10 @@ export default function Users() {
                         </div>
                       </td>
                       <td style={{ padding: "13px 16px" }}>
-                        <Btn size="sm" variant="ghost" onClick={() => setModal(u)}>Editar</Btn>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <Btn size="sm" variant="ghost" onClick={() => setModal(u)}>Editar</Btn>
+                          <Btn size="sm" variant="danger" onClick={() => setConfirmDelete(u)}>🗑</Btn>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -221,6 +231,7 @@ export default function Users() {
 
       {modal && <UserModal user={modal === "new" ? null : modal} plans={plans} onClose={() => setModal(null)} onSave={saveUser} />}
 
+      {/* Modal confirmar activar/desactivar */}
       {confirmToggle && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
           <div style={{ background: T.dark2, border: `1px solid ${T.border}`, borderRadius: "12px", padding: "28px", maxWidth: "360px", textAlign: "center" }}>
@@ -241,6 +252,26 @@ export default function Users() {
               <Btn variant={confirmToggle.status === "ACTIVO" ? "danger" : "primary"} onClick={() => toggleStatus(confirmToggle)} full>
                 {confirmToggle.status === "ACTIVO" ? "Desactivar" : "Activar"}
               </Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar eliminar */}
+      {confirmDelete && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+          <div style={{ background: T.dark2, border: `1px solid ${T.border}`, borderRadius: "12px", padding: "28px", maxWidth: "360px", textAlign: "center" }}>
+            <p style={{ fontSize: "32px", margin: "0 0 12px" }}>⚠️</p>
+            <p style={{ color: T.text, fontSize: "16px", fontWeight: "700", margin: "0 0 8px" }}>¿Eliminar usuario?</p>
+            <p style={{ color: T.textSub, fontSize: "13px", margin: "0 0 6px" }}>
+              <strong style={{ color: T.yellow }}>{confirmDelete.name}</strong>
+            </p>
+            <p style={{ color: T.textMute, fontSize: "12px", margin: "0 0 24px" }}>
+              Esta acción desactivará permanentemente al miembro del sistema.
+            </p>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <Btn variant="outline" onClick={() => setConfirmDelete(null)} full>Cancelar</Btn>
+              <Btn variant="danger" onClick={() => deleteUser(confirmDelete)} full>Eliminar</Btn>
             </div>
           </div>
         </div>
