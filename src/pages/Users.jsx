@@ -258,24 +258,43 @@ export default function Users() {
       )}
 
       {/* Modal confirmar eliminar */}
-      {confirmDelete && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
-          <div style={{ background: T.dark2, border: `1px solid ${T.border}`, borderRadius: "12px", padding: "28px", maxWidth: "360px", textAlign: "center" }}>
-            <p style={{ fontSize: "32px", margin: "0 0 12px" }}>⚠️</p>
-            <p style={{ color: T.text, fontSize: "16px", fontWeight: "700", margin: "0 0 8px" }}>¿Eliminar usuario?</p>
-            <p style={{ color: T.textSub, fontSize: "13px", margin: "0 0 6px" }}>
-              <strong style={{ color: T.yellow }}>{confirmDelete.name}</strong>
-            </p>
-            <p style={{ color: T.textMute, fontSize: "12px", margin: "0 0 24px" }}>
-              Esta acción desactivará permanentemente al miembro del sistema.
-            </p>
-            <div style={{ display: "flex", gap: "10px" }}>
-              <Btn variant="outline" onClick={() => setConfirmDelete(null)} full>Cancelar</Btn>
-              <Btn variant="danger" onClick={() => deleteUser(confirmDelete)} full>Eliminar</Btn>
-            </div>
-          </div>
-        </div>
-      )}
+{confirmDelete && (
+  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+    <div style={{ background: T.dark2, border: `1px solid ${T.border}`, borderRadius: "12px", padding: "28px", maxWidth: "380px", textAlign: "center" }}>
+      <p style={{ fontSize: "32px", margin: "0 0 12px" }}>⚠️</p>
+      <p style={{ color: T.text, fontSize: "16px", fontWeight: "700", margin: "0 0 8px" }}>¿Qué deseas hacer con este usuario?</p>
+      <p style={{ color: T.yellow, fontSize: "14px", fontWeight: "700", margin: "0 0 20px" }}>{confirmDelete.name}</p>
+
+      {/* Opción 1 — Desactivar */}
+      <div style={{ background: T.dark3, borderRadius: "10px", padding: "14px", marginBottom: "10px", textAlign: "left", cursor: "pointer", border: `1px solid ${T.border}` }}
+        onClick={() => toggleStatus({ ...confirmDelete, status: "ACTIVO" })}>
+        <p style={{ color: T.warning, margin: "0 0 4px", fontSize: "13px", fontWeight: "700" }}>⛔ Desactivar</p>
+        <p style={{ color: T.textMute, margin: 0, fontSize: "11px" }}>El usuario queda en el sistema. Se conserva todo su historial y se puede reactivar.</p>
+      </div>
+
+      {/* Opción 2 — Eliminar permanente */}
+      <div style={{ background: T.dark3, borderRadius: "10px", padding: "14px", marginBottom: "20px", textAlign: "left", cursor: "pointer", border: `1px solid ${T.border}` }}
+        onClick={async () => {
+          try {
+            await fetch(`${API}/members/${confirmDelete.id}/permanent`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${localStorage.getItem("solgym_token")}` },
+            });
+            setConfirmDelete(null);
+            await load();
+          } catch (e) { alert("Error: " + e.message); }
+        }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = T.danger}
+        onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
+      >
+        <p style={{ color: T.danger, margin: "0 0 4px", fontSize: "13px", fontWeight: "700" }}>🗑 Eliminar permanentemente</p>
+        <p style={{ color: T.textMute, margin: 0, fontSize: "11px" }}>Borra al usuario y todo su historial (asistencias, métricas, rutinas). Esta acción es irreversible.</p>
+      </div>
+
+      <Btn variant="outline" onClick={() => setConfirmDelete(null)} full>Cancelar</Btn>
+    </div>
+  </div>
+)}
     </div>
   );
 }
